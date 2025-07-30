@@ -16,7 +16,7 @@ import { UseGuards } from '@nestjs/common';
 import { TenantGuard } from '../auth/guards/tenant.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { Schema } from 'src/common/decorators/schema.decorator';
+import { Schema } from '../common/decorators/schema.decorator';
 
 @ApiTags('consumers')
 @UseGuards(JwtAuthGuard, TenantGuard)

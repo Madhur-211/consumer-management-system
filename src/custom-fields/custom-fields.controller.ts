@@ -11,7 +11,7 @@ import { CustomFieldsService } from './custom-fields.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantGuard } from '../auth/guards/tenant.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { Schema } from 'src/common/decorators/schema.decorator';
+import { Schema } from '../common/decorators/schema.decorator';
 
 @Controller('custom-fields')
 @UseGuards(JwtAuthGuard, TenantGuard)
