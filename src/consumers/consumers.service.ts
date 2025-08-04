@@ -10,11 +10,15 @@ import { Consumer } from '../models/consumer.model';
 import { CreateConsumerDto } from './dto/create-consumer.dto';
 import { Request } from 'express';
 import { REQUEST } from '@nestjs/core';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 
+@Injectable()
 export class ConsumersService {
   constructor(
     @InjectModel(Consumer)
     private consumerModel: typeof Consumer,
+    @InjectPinoLogger(ConsumersService.name)
+    private readonly logger: PinoLogger,
     // @Inject(REQUEST) private readonly request: Request,
   ) {}
   
@@ -33,41 +37,51 @@ export class ConsumersService {
     userId: string,
     schema: string,
   ): Promise<Consumer> {
-    // const {Consumer } =this.getModels()
-    return await this.consumerModel.schema(schema).create({
+    this.logger.info({ userId, schema }, 'Creating new consumer');
+    const result = await this.consumerModel.schema(schema).create({
       ...createConsumerDto,
       created_by: userId,
       updated_by: userId,
     } as any);
+    this.logger.debug({ consumerId: result.consumer_id }, 'Consumer created');
+    return result;
   }
 
-  findAll(schema: string,) {
+  async findAll(schema: string) {
+    this.logger.info({ schema }, 'Finding all consumers');
     return this.consumerModel.schema(schema).findAll({ paranoid: false });
   }
 
-  findOne(consumer_id: string, schema: string,) {
+  async findOne(consumer_id: string, schema: string) {
+    this.logger.info({ consumer_id, schema }, 'Finding one consumer');
     return this.consumerModel.schema(schema).findByPk(consumer_id);
   }
 
   async update(consumer_id: string, dto: Partial<CreateConsumerDto>, schema: string,) {
+    this.logger.info({ consumer_id, schema }, 'Updating consumer');
     try {
-      return await this.consumerModel.schema(schema).update(dto, {
+      const result = await this.consumerModel.schema(schema).update(dto, {
         where: { consumer_id },
         returning: true,
       });
+      this.logger.debug({ consumer_id, updated: result[0] }, 'Consumer updated');
+      return result;
     } catch (error) {
-      console.error('Update Consumer Error:', error);
+      this.logger.error(error, 'Error updating consumer');
       throw error;
     }
   }
 
   async remove(id: string, schema: string,): Promise<number> {
+    this.logger.warn({ id, schema }, 'Removing consumer');
     try {
-      return await this.consumerModel
+      const result = await this.consumerModel
         .schema(schema)
         .destroy({ where: { consumer_id: id } });
+      this.logger.debug({ id, result }, 'Consumer removed');
+      return result;
     } catch (error) {
-      console.error('Delete Consumer Error:', error);
+      this.logger.error(error, 'Error removing consumer');
       throw error;
     }
   }
@@ -82,16 +96,13 @@ export class ConsumersService {
   // }
 
   async blockUnblock(id: string, schema: string,): Promise<Consumer> {
+    this.logger.info({ id, schema }, 'Toggling block status');
     const consumer = await this.consumerModel.schema(schema).findByPk(id);
     if (!consumer) throw new NotFoundException('Consumer not found');
-    if (consumer.is_blocked == true) {
-      console.log(consumer.is_blocked);
-      consumer.is_blocked = false;
-    }
-    else {
-      consumer.is_blocked = true;
-    }
+
+    consumer.is_blocked = !consumer.is_blocked;
     await consumer.save();
+    this.logger.debug({ id, blocked: consumer.is_blocked }, 'Block status updated');
     return consumer;
   }
 
@@ -114,16 +125,13 @@ export class ConsumersService {
   // }
 
   async testConsumer(id: string, schema: string,): Promise<Consumer> {
+    this.logger.info({ id, schema }, 'Toggling test consumer status');
     const consumer = await this.consumerModel.schema(schema).findByPk(id);
     if (!consumer) throw new NotFoundException('Consumer not found');
 
-    if (consumer.is_test_consumer == true) {
-      consumer.is_test_consumer = false;
-    }
-    else {
-      consumer.is_test_consumer = true;
-    }
+    consumer.is_test_consumer = !consumer.is_test_consumer;
     await consumer.save();
+    this.logger.debug({ id, is_test_consumer: consumer.is_test_consumer }, 'Test consumer status updated');
     return consumer;
   }
 
